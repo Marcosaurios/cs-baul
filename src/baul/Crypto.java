@@ -43,12 +43,22 @@ public class Crypto {
      }
 	
      public static void main(String[] args) {
-	String key = "This is a secret";
+	String key = "This is a secret";//esto debe generarse random o introducirla el usu
+	File inputFile = new File("fichero.txt");//aqui getFiechero
+	
+	//if(true){//cambiar para que esto se haga cuando se active la opcion encriptar
+		File encryptedFile = new File(inputFile.getName()+"-ENCRIPTED.txt");
+		
+	//}
+	
+	//else if(false){//esto se hace cuando elijamos desencriptar y TENGA LA CLAVE
+		
+		File decryptedFile = new File(inputFile.getName()+"-DECRIPTED.txt");
+	//}
 	
 	
-	File inputFile = new File("fichero.rtf");
-	File encryptedFile = new File("fichero.encrypted");
-	File decryptedFile = new File("decrypted-text.txt");
+	
+	
 	
 	try {
 	     Crypto.fileProcessor(Cipher.ENCRYPT_MODE,key,inputFile,encryptedFile);
