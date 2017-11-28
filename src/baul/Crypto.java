@@ -85,6 +85,10 @@ public class Crypto {
 	       FileOutputStream outputStream2 = new FileOutputStream(salida);
 	       outputStream2.write(encriptado);
 	       //aqui ya he encriptado la clave de aes con rsa y la tengo en un fichero
+	       
+	       //ahora tengo que concatenar el archivo con la clave en rsa del usuario	       
+	      
+	       
 	       outputStream.close();
 	       inputStream.close();
 	       
