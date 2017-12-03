@@ -20,6 +20,9 @@ public class Actions extends Frame implements WindowListener,ActionListener {
                 
                 
                 
+                
+                
+                
         }
 
         public Actions(String title) {
