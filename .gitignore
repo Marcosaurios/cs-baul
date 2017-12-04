@@ -1,1 +1,7 @@
 /bin/
+publickey.dat
+privatekey.dat
+fichero.txt-ENCRIPTED.txt
+fichero.txt-DECRIPTED.txt
+claveRSA.txt
+claveAES

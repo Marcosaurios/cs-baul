@@ -30,13 +30,79 @@ import javax.crypto.spec.SecretKeySpec;
 import javax.crypto.Cipher;
 
 public class Crypto {
-	 private static Cipher rsa;
-	 public static int tamanoHeader;
+	 private static Cipher rsa;	
 	 public static int tamOriginal;
-   static void fileProcessor(int cipherMode,Key key,File inputFile,File outputFile){
-	 try {
-	       
-	       Cipher cipher = Cipher.getInstance("AES");
+   
+   
+   static void decrypt(File completo, Key privateKey){
+	  try{ 
+	   int tamClave=0;
+	  	   
+	   FileInputStream fis = new FileInputStream(completo);
+       int numBtyes = fis.available();
+       byte[] bytes = new byte[numBtyes];
+       fis.read(bytes);
+       fis.close();
+       
+      
+
+
+	
+       //tamClave = bytes[0];
+      
+       
+       byte[] clave = new byte[16];
+            
+       //Guarda el tamaño de la clave
+       for(int i= 0; i<16;i++) {
+			clave[i] = bytes[i];
+		}
+       System.out.println("clave"+(int)clave[2]);
+       
+       int tamFichero;
+       
+       tamFichero = numBtyes - 1 -tamClave;       
+       byte[] fichero = new byte[tamFichero];
+       
+       //Guarda fichero
+       for(int i=0 ; i<fichero.length;i++) {
+			fichero[i] = bytes[tamClave+1+i];
+		}
+       
+       
+       rsa.init(Cipher.DECRYPT_MODE, privateKey);
+       byte[] claveAES = rsa.doFinal(clave);
+       String claveDesencriptado = new String(claveAES);
+       
+       Key key = new SecretKeySpec(claveDesencriptado.getBytes(),  0, 16, "AES");
+       Cipher aes = Cipher.getInstance("AES/ECB/PKCS5Padding");
+       
+       aes.init(Cipher.DECRYPT_MODE, key);
+       byte[] desencriptado = aes.doFinal(fichero);
+       
+       File salida = new File("TextoDesenciptado.txt");
+       FileOutputStream outputStream2 = new FileOutputStream(salida);
+       outputStream2.write(desencriptado);
+       //aqui ya he encriptado la clave de aes con rsa y la tengo en un fichero
+       
+       outputStream2.close();
+     
+       
+      //ahora tenemos la clave desencriptada
+       
+	  }
+	  catch(Exception ex){
+		  System.out.println(ex.getMessage());
+          ex.printStackTrace();
+		  
+	  }   		
+
+   }
+   
+   static void encrypt(int cipherMode,Key key,File inputFile,File outputFile, Key publicKey){
+	   try{
+		   
+		   Cipher cipher = Cipher.getInstance("AES");
 	       cipher.init(cipherMode, key);
 	       
 	       saveKey(key, "claveAES");
@@ -52,20 +118,7 @@ public class Crypto {
 	       // --- antes de escribirlo en el outputFile, hay que concatenarle al principio la clave cifrada
 	       
 	       // ----->> para ello primero colocamos el metodo que cifra la clave
-		       // Generar el par de claves
-		       KeyPairGenerator keyPairGenerator = KeyPairGenerator.getInstance("RSA");
-		       KeyPair keyPair = keyPairGenerator.generateKeyPair();
-		       PublicKey publicKey = keyPair.getPublic();
-		       PrivateKey privateKey = keyPair.getPrivate();
-	
-		       // Se salva y recupera de fichero la clave publica
-		       saveKey(publicKey, "publickey.dat");
-		       publicKey = loadPublicKey("publickey.dat");
-	
-		       // Se salva y recupera de fichero la clave privada
-		       saveKey(privateKey, "privatekey.dat");
-		       privateKey = loadPrivateKey("privatekey.dat");
-	
+		      
 		       // Obtener la clave para encriptar/desencriptar
 		       
 		       File fichero = new File("claveAES");
@@ -81,56 +134,37 @@ public class Crypto {
 		       
 		       // Creamos outputStream que contendra el texto cifrado o descifrado segun el siguiente if
 		       FileOutputStream outputStream = new FileOutputStream(outputFile);
+		
+		// Si modo ENCRIPTAR: tenemos que anyadir la clave en la cabecera
+	       // Se concatena la clave RSA con el archivo cifrado, en ese orden, para que aparezca en la cabecera
+
+		   
+		   
+		   // byte tamCabecera[] = new byte[1];
+		   
+		   // tamCabecera[0] = (byte) encriptado.length;
+		    //tamCabecera es negativo cuando pasas a bytes
 		       
-				if(cipherMode == Cipher.ENCRYPT_MODE) {
-					// Si modo ENCRIPTAR: tenemos que anyadir la clave en la cabecera
-				       // Se concatena la clave RSA con el archivo cifrado, en ese orden, para que aparezca en la cabecera
-
-						ByteArrayOutputStream byteoutput = new ByteArrayOutputStream( );
-						// Colocamos la clave primero
-						byteoutput.write( encriptado );
-						// Concatenamos el texto cifrado
-						byteoutput.write( outputBytes );
-						byte completo[] = byteoutput.toByteArray( );
-						
-						// Y lo manda al outpuFile que es el encryptedFile (en el main)
-				       outputStream.write(completo);
-				       
-				       // Calculamos el tamano de la clave y el tamano del archivo 
-				       // para luego al desencriptar saber cuanto mide cada uno. Solo se
-				       // actualizan los valores cada vez que cambia el texto a encriptar
-				       tamanoHeader = encriptado.length;
-				       tamOriginal = inputBytes.length;
-				       
-				       
-
-				       //System.out.println("encript head " + tamanoHeader);
-				       //System.out.println("encript original " + tamOriginal);
-				}
-				else {
-					// Si modo DESENCRIPTAR: tenemos que quitarle la cabecera y quedarnos con el resto, para ello:
-					
-					//Array nuevo del mismo tamano del archivo SIN ENCRIPTAR 
-					byte[] contenido = new byte[tamOriginal];
-					
-					// para que contenga la misma informacion que el archivo sin encriptar:
-					//	Pasamos valores del array ya desencriptado al nuevo
-					// k: indice del header, para saber DONDE EMPIEZA el contenido del archivo real
-					for(int i = 0,k = tamanoHeader;i<tamOriginal;i++, k++) {
-						contenido[i]=outputBytes[k];
-					}
-					// Y lo manda al outpuFile que es el desencryptedFile
-				       outputStream.write(contenido);
-
-				       File compruebaconcatena = new File("compruebaconcatena.txt");
-				       FileOutputStream outputStream3 = new FileOutputStream(compruebaconcatena);
-				       outputStream3.write(outputBytes);
-				       
-				       //System.out.println("decript head " + tamanoHeader);
-				       //System.out.println("decript original " + tamOriginal);
-				}
+			ByteArrayOutputStream byteoutput = new ByteArrayOutputStream( );
+			//byteoutput.write(tamCabecera[0]);
+			// Colocamos la clave primero
+			byteoutput.write( encriptado );
+			// Concatenamos el texto cifrado
+			byteoutput.write( outputBytes );
+			byte completo[] = byteoutput.toByteArray( );
+			
+			// Y lo manda al outpuFile que es el encryptedFile (en el main)
+	       outputStream.write(completo);
+	       
+	       // Calculamos el tamano de la clave y el tamano del archivo 
+	       // para luego al desencriptar saber cuanto mide cada uno. Solo se
+	       // actualizan los valores cada vez que cambia el texto a encriptar
+	       
 	       
 
+	       //System.out.println("encript head " + tamanoHeader);
+	       //System.out.println("encript original " + tamOriginal);
+	       
 	       File salida = new File("claveRSA.txt");
 	       FileOutputStream outputStream2 = new FileOutputStream(salida);
 	       outputStream2.write(encriptado);
@@ -138,18 +172,38 @@ public class Crypto {
 	       
 	       outputStream.close();
 	       inputStream.close();
-	       
-
-	    } catch (Exception e) {
-		e.printStackTrace();
-            }
-     }
+		   
+	   }
+	   catch(Exception ex){
+		   System.out.println(ex.getMessage());
+           ex.printStackTrace();
+	   
+	   }
+   }
+   
 	
      public static void main(String[] args) {	
     	 try {
 	KeyGenerator keyGenerator = KeyGenerator.getInstance("AES");
     keyGenerator.init(128);
-    Key key = keyGenerator.generateKey();
+    Key key = keyGenerator.generateKey();    
+    
+      
+ 	   //AQUI PEDIMOS CLAVE Y LA GUARDAMOS Y CONTADOR PARA UNA ITERACION
+ 	   // Generar el par de claves
+        KeyPairGenerator keyPairGenerator = KeyPairGenerator.getInstance("RSA");
+        KeyPair keyPair = keyPairGenerator.generateKeyPair();
+        PublicKey publicKey = keyPair.getPublic();
+        PrivateKey privateKey = keyPair.getPrivate();
+
+        // Se salva y recupera de fichero la clave publica
+        saveKey(publicKey, "publickey.dat");
+        publicKey = loadPublicKey("publickey.dat");
+
+        // Se salva y recupera de fichero la clave privada
+        saveKey(privateKey, "privatekey.dat");
+        privateKey = loadPrivateKey("privatekey.dat");
+ 	 
     
     String nombre = "fichero.txt";
     // Obtener primero el nombre del archivo (para cuando se haga el selector de archivo a cifrar)
@@ -168,13 +222,12 @@ public class Crypto {
 		File decryptedFile = new File(inputFile.getName()+"-DECRIPTED.txt");
 	//}
 	
-	//ahora tengo que encryptar el archivo que tengo con la clave aes
-	
-	
-	
-	
-	     Crypto.fileProcessor(Cipher.ENCRYPT_MODE,key,inputFile,encryptedFile);
-	     Crypto.fileProcessor(Cipher.DECRYPT_MODE,key,encryptedFile,decryptedFile);
+	//ahora tengo que encryptar el archivo que tengo con la clave aes	
+	File archivo = new File("fichero.txt-ENCRIPTED.txt");
+			
+	     Crypto.encrypt(Cipher.ENCRYPT_MODE, key,inputFile,decryptedFile, publicKey);
+	     Crypto.decrypt(archivo,privateKey);
+	     
 	     System.out.println("Success");
 	 } catch (Exception ex) {
 	     System.out.println(ex.getMessage());
